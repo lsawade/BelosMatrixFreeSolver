@@ -78,7 +78,7 @@ int main(int argc, char* argv[])
   RCP<ParameterList> params = rcp(new ParameterList());
   params->set("Maximum Iterations",   maxIters);
   params->set("Convergence Tolerance", tol);
-  params->set("Verbosity",            Belos::Errors);
+  params->set("Verbosity",            static_cast<int>(Belos::Errors));
 
   // ---- Results collector ----
   std::vector<SolveResult> results;

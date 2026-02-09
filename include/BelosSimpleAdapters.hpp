@@ -101,23 +101,11 @@ public:
   //   A  : MV  (m x p)
   //   B  : dense (p x q)
   //   mv : MV  (m x q)
-  static void MvTimesMatAddMv(const double alpha, const MV& A,
-                              const Teuchos::SerialDenseMatrix<int, double>& B,
-                              const double beta, MV& mv) {
-    const int m = A.length();
-    const int p = A.numVecs();
-    const int q = mv.numVecs();
-    for (int j = 0; j < q; ++j) {
-      if (beta == 0.0)
-        for (int i = 0; i < m; ++i) mv(i, j) = 0.0;
-      else
-        for (int i = 0; i < m; ++i) mv(i, j) *= beta;
-      for (int k = 0; k < p; ++k) {
-        const double c = alpha * B(k, j);
-        for (int i = 0; i < m; ++i)
-          mv(i, j) += c * A(i, k);
-      }
-    }
+  static void MvTimesMatAddMv(const double /*alpha*/, const MV& /*A*/,
+                              const Teuchos::SerialDenseMatrix<int, double>& /*B*/,
+                              const double /*beta*/, MV& /*mv*/) {
+    throw std::runtime_error("MvTimesMatAddMv called – this solver "
+                             "requires dense-matrix operations");
   }
 
   // mv = alpha * A + beta * B
@@ -145,19 +133,10 @@ public:
   }
 
   // C = alpha * A^T * B   (dense output, p x q)
-  static void MvTransMv(const double alpha, const MV& A, const MV& B,
-                        Teuchos::SerialDenseMatrix<int, double>& C) {
-    const int m = A.length();
-    const int p = A.numVecs();
-    const int q = B.numVecs();
-    C.shape(p, q);
-    for (int i = 0; i < p; ++i)
-      for (int j = 0; j < q; ++j) {
-        double dot = 0.0;
-        for (int k = 0; k < m; ++k)
-          dot += A(k, i) * B(k, j);
-        C(i, j) = alpha * dot;
-      }
+  static void MvTransMv(const double /*alpha*/, const MV& /*A*/, const MV& /*B*/,
+                        Teuchos::SerialDenseMatrix<int, double>& /*C*/) {
+    throw std::runtime_error("MvTransMv called – this solver "
+                             "requires dense-matrix operations");
   }
 
   // dots[j] = A(:,j) . B(:,j)
