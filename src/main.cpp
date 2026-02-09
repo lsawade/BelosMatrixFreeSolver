@@ -70,9 +70,7 @@ int main(int argc, char* argv[])
     return EXIT_FAILURE;
   }
 
-  // ---- Configure the Belos solver (GMRES) ----
-  // For an SPD system like the Laplacian, you could also use "Block CG"
-  // or "Pseudo Block CG".
+  // ---- Configure the Belos solver (Pseudo Block CG) ----
   RCP<ParameterList> params = rcp(new ParameterList());
   params->set("Maximum Iterations",    maxIters);
   params->set("Convergence Tolerance", tol);
