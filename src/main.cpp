@@ -29,9 +29,9 @@
 int main(int argc, char* argv[])
 {
   MPI_Init(&argc, &argv);
-  using Teuchos::RCP;
-  using Teuchos::rcp;
-  using Teuchos::ParameterList;
+  using Teuchos::RCP; // Reference-counted pointer (Teuchos::RCP) for memory management
+  using Teuchos::rcp; // Helper function to create RCPs (rcp(new ...))
+  using Teuchos::ParameterList; // For solver parameters
   using std::cout;
   using std::endl;
 
