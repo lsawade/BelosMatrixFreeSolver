@@ -50,6 +50,7 @@ struct SolveResult {
   int         iterations;
   double      error;
   std::string failReason;
+  std::string note;
 };
 
 int main(int argc, char* argv[])
@@ -86,7 +87,8 @@ int main(int argc, char* argv[])
   // Helper: solve, compute error, record result
   auto runSolve = [&](const std::string& name,
                       RCP<solver_t> solver,
-                      RCP<MV> x) {
+                      RCP<MV> x,
+                      const std::string& note = "") {
     try {
       Belos::ReturnType ret = solver->solve();
       double errNorm = 0.0;
@@ -96,14 +98,14 @@ int main(int argc, char* argv[])
       }
       errNorm = std::sqrt(errNorm);
       results.push_back({name, ret == Belos::Converged,
-                         solver->getNumIters(), errNorm, ""});
+                         solver->getNumIters(), errNorm, "", note});
     } catch (const std::exception& e) {
-      results.push_back({name, false, 0, -1.0, e.what()});
+      results.push_back({name, false, 0, -1.0, e.what(), note});
     }
   };
 
   // Macro: create fresh x, problem, solver; run and record
-  #define TRY_SOLVER(SolverType, Name, Params)                        \
+  #define TRY_SOLVER(SolverType, Name, Params, Note)                   \
     {                                                                  \
       cout << "  Running " << Name << "..." << endl;                   \
       auto x    = rcp(new MV(n, 1));                                   \
@@ -111,9 +113,9 @@ int main(int argc, char* argv[])
       prob->setProblem();                                               \
       try {                                                             \
         auto s = rcp(new SolverType<ST, MV, OP>(prob, Params));        \
-        runSolve(Name, s, x);                                          \
+        runSolve(Name, s, x, Note);                                    \
       } catch (const std::exception& e) {                              \
-        results.push_back({Name, false, 0, -1.0, e.what()});          \
+        results.push_back({Name, false, 0, -1.0, e.what(), Note});    \
       }                                                                 \
     }
 
@@ -121,44 +123,45 @@ int main(int argc, char* argv[])
        << ", tol=" << tol << ") ===" << endl;
 
   // --- CG family (SPD) ---
-  TRY_SOLVER(Belos::PseudoBlockCGSolMgr,           "PseudoBlockCG",   params)
-  TRY_SOLVER(Belos::BlockCGSolMgr,                 "BlockCG",         params)
+  TRY_SOLVER(Belos::PseudoBlockCGSolMgr,           "PseudoBlockCG",   params, "")
+  TRY_SOLVER(Belos::BlockCGSolMgr,                 "BlockCG",         params, "dense")
   {
     auto p = rcp(new ParameterList(*params));
     p->set("Num Recycled Blocks", 5);
-    TRY_SOLVER(Belos::PCPGSolMgr,                  "PCPG",            p)
+    TRY_SOLVER(Belos::PCPGSolMgr,                  "PCPG",            p, "dense")
   }
   {
     auto p = rcp(new ParameterList(*params));
     p->set("Num Recycled Blocks", 5);
-    TRY_SOLVER(Belos::RCGSolMgr,                   "RCG",             p)
+    TRY_SOLVER(Belos::RCGSolMgr,                   "RCG",             p, "dense")
   }
-  TRY_SOLVER(Belos::PseudoBlockStochasticCGSolMgr, "StochasticCG",    params)
+  TRY_SOLVER(Belos::PseudoBlockStochasticCGSolMgr, "StochasticCG",    params, "")
 
   // --- GMRES family ---
-  TRY_SOLVER(Belos::BlockGmresSolMgr,              "BlockGMRES",      params)
-  TRY_SOLVER(Belos::PseudoBlockGmresSolMgr,        "PseudoBlockGMRES",params)
+  TRY_SOLVER(Belos::BlockGmresSolMgr,              "BlockGMRES",      params, "dense")
+  TRY_SOLVER(Belos::PseudoBlockGmresSolMgr,        "PseudoBlockGMRES",params, "")
   // GCRODRSolMgr omitted: requires Range1D overloads
   // GmresPolySolMgr omitted: requires Range1D overloads and SolverFactory
 
   // --- Other Krylov methods ---
-  TRY_SOLVER(Belos::BiCGStabSolMgr,                "BiCGStab",        params)
-  TRY_SOLVER(Belos::TFQMRSolMgr,                   "TFQMR",           params)
-  TRY_SOLVER(Belos::PseudoBlockTFQMRSolMgr,        "PseudoBlockTFQMR",params)
-  TRY_SOLVER(Belos::MinresSolMgr,                  "MINRES",          params)
-  TRY_SOLVER(Belos::FixedPointSolMgr,              "FixedPoint",      params)
-  TRY_SOLVER(Belos::LSQRSolMgr,                    "LSQR",            params)
+  TRY_SOLVER(Belos::BiCGStabSolMgr,                "BiCGStab",        params, "")
+  TRY_SOLVER(Belos::TFQMRSolMgr,                   "TFQMR",           params, "")
+  TRY_SOLVER(Belos::PseudoBlockTFQMRSolMgr,        "PseudoBlockTFQMR",params, "")
+  TRY_SOLVER(Belos::MinresSolMgr,                  "MINRES",          params, "")
+  TRY_SOLVER(Belos::FixedPointSolMgr,              "FixedPoint",      params, "")
+  TRY_SOLVER(Belos::LSQRSolMgr,                    "LSQR",            params, "dense")
 
   #undef TRY_SOLVER
 
   // ---- Summary table ----
-  cout << "\n" << std::string(72, '=') << endl;
+  cout << "\n" << std::string(80, '=') << endl;
   cout << std::left  << std::setw(22) << "Solver"
        << std::right << std::setw(12) << "Converged"
        << std::setw(10) << "Iters"
        << std::setw(18) << "||x - x*||_2"
+       << "  " << std::left << "Note"
        << endl;
-  cout << std::string(72, '-') << endl;
+  cout << std::string(80, '-') << endl;
 
   for (const auto& r : results) {
     cout << std::left << std::setw(22) << r.name;
@@ -172,9 +175,11 @@ int main(int argc, char* argv[])
       std::string msg = r.failReason.substr(0, 45);
       cout << "  FAILED: " << msg;
     }
+    if (!r.note.empty())
+      cout << "  " << r.note;
     cout << endl;
   }
-  cout << std::string(72, '=') << endl;
+  cout << std::string(80, '=') << endl;
 
   MPI_Finalize();
   return EXIT_SUCCESS;
